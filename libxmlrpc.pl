@@ -9,6 +9,7 @@
 :- use_module(library('http/http_dispatch')).
 :- use_module(library('http/http_session')).
 :- use_module(library('http/http_error')).
+:- use_module(library('http/http_client')).
 :- use_module(library('sgml')).
 :- use_module(library('sgml_write')).
 :- use_module(library('xpath')).
@@ -27,13 +28,26 @@ server(Port) :- http_server(http_dispatch, [port(Port)]).
 % Predicate to handle requests
 reply(Request) :-
 	member(method(post),Request),!,
-	% TODO: Read request data, parse XML, call registered predicate requested by remote procedure call
-	% and create response XML DOM.
-
+	http_read_data(Request,Data,[to(string)]),
+	new_memory_file(M_file),
+	open_memory_file(M_file,write,Write_stream),
+	write(Write_stream,Data),
+	close(Write_stream),
+	open_memory_file(M_file,read,Read_stream),
+	read_string(Read_stream,37,_HTTP_method),
+	% Parse XML
+	load_xml(Read_stream,DOM,[]),
+	close(Read_stream),
+	free_memory_file(M_file),
+	%xpath(DOM,/methodCall/methodName/text(),Method),
+	%xpath(DOM,/methodCall/params/param),
+	% TODO: Call predicate from module specified by class and method
+	
+	% TODO: Generate response DOM
+	Response_DOM=DOM,
 	current_output(O),
 	set_stream(O,encoding(utf8)),
-	write('Content-type: application/xml'),
+	write('Content-type: text/xml'),
 	nl,nl,
-	write('<?xml version="1.0" encoding="UTF-8"?>'),
-	% TODO: Send an actual response.
-	xml_write(O,element('response',[],['Response placeholder text']),[header(false)]).
+	write('<?xml version="1.0" encoding="UTF-8"?>'),nl,
+	xml_write(O,Response_DOM,[header(false)]),nl.
