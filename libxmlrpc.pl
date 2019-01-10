@@ -28,6 +28,46 @@ server(Port) :- http_server(http_dispatch, [port(Port)]).
 % Predicate to handle requests
 reply(Request) :-
 	member(method(post),Request),!,
+	get_post_data(DOM,Request),
+	xpath(DOM,//methodCall/methodName,M),
+	M=element(methodName,[],[M1]),
+	atom_string(M1,M2),
+	split_string(M2,".","",[MS,PS]),
+	atom_string(Module,MS),
+	atom_string(Predicate,PS),
+	current_module(Module),
+	current_predicate(Predicate/2),
+	atom_string(Call,Predicate),
+	extract_parameters(Parameters,DOM),
+	% Call predicate from module specified by class and method
+	call(Call,Results,Parameters),
+	% TODO: Generate response DOM
+	Response_DOM=DOM,
+	current_output(O),
+	set_stream(O,encoding(utf8)),
+	write('Content-type: text/xml'),
+	nl,nl,
+	write('<?xml version="1.0" encoding="UTF-8"?>'),nl,
+	xml_write(O,Response_DOM,[header(false)]),nl.
+
+% extract(-Parameters,+List_of_elements
+extract([],[]).
+extract(Parameters,[element(value,[],[Value])|More_elements]) :-
+	extract(PX,More_elements),
+	(
+		(number(Value),Parameters=[Value|PX]);
+		(Value=element(float,[],[F]),atom_number(F,V),Parameters=[V|PX]);
+		(Value=element(i4,[],[I]),atom_number(I,V),Parameters=[V|PX])
+	).
+
+% extract_parameters(-Parameters,+DOM)
+extract_parameters(Parameters,DOM) :-
+	xpath(DOM,//methodCall/params/param,P1),
+	P1=element(param,[],P2),
+	extract(Parameters,P2).
+
+% get_post_data(-DOM,+Request)
+get_post_data(DOM,Request) :-
 	http_read_data(Request,Data,[to(string)]),
 	new_memory_file(M_file),
 	open_memory_file(M_file,write,Write_stream),
@@ -37,23 +77,4 @@ reply(Request) :-
 	% Parse XML
 	load_xml(Read_stream,DOM,[space(remove)]),
 	close(Read_stream),
-	free_memory_file(M_file),
-	xpath(DOM,//methodCall/methodName,M),
-	M=element(methodName,[],[M1]),
-	atom_string(M1,M2),
-	split_string(M2,".","",[MS,PS]),
-	atom_string(Module,MS),
-	atom_string(Predicate,PS),
-	current_module(Module),
-	current_predicate(Predicate/2),
-	%xpath(DOM,//methodCall/params/param/value,Parameters),
-	% TODO: Call predicate from module specified by class and method
-	
-	% TODO: Generate response DOM
-	Response_DOM=DOM,
-	current_output(O),
-	set_stream(O,encoding(utf8)),
-	write('Content-type: text/xml'),
-	nl,nl,
-	write('<?xml version="1.0" encoding="UTF-8"?>'),nl,
-	xml_write(O,Response_DOM,[header(false)]),nl.
+	free_memory_file(M_file).
