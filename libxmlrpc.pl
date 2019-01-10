@@ -34,13 +34,19 @@ reply(Request) :-
 	write(Write_stream,Data),
 	close(Write_stream),
 	open_memory_file(M_file,read,Read_stream),
-	read_string(Read_stream,37,_HTTP_method),
 	% Parse XML
-	load_xml(Read_stream,DOM,[]),
+	load_xml(Read_stream,DOM,[space(remove)]),
 	close(Read_stream),
 	free_memory_file(M_file),
-	%xpath(DOM,/methodCall/methodName/text(),Method),
-	%xpath(DOM,/methodCall/params/param),
+	xpath(DOM,//methodCall/methodName,M),
+	M=element(methodName,[],[M1]),
+	atom_string(M1,M2),
+	split_string(M2,".","",[MS,PS]),
+	atom_string(Module,MS),
+	atom_string(Predicate,PS),
+	current_module(Module),
+	current_predicate(Predicate/2),
+	%xpath(DOM,//methodCall/params/param/value,Parameters),
 	% TODO: Call predicate from module specified by class and method
 	
 	% TODO: Generate response DOM
