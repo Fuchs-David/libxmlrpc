@@ -41,8 +41,8 @@ reply(Request) :-
 	extract_parameters(Parameters,DOM),
 	% Call predicate from module specified by class and method
 	call(Call,Results,Parameters),
-	% TODO: Generate response DOM
-	Response_DOM=DOM,
+	% Create response
+	create_response(Response_DOM,Results),
 	current_output(O),
 	set_stream(O,encoding(utf8)),
 	write('Content-type: text/xml'),
@@ -56,7 +56,7 @@ extract(Parameters,[element(value,[],[Value])|More_elements]) :-
 	extract(PX,More_elements),
 	(
 		(number(Value),Parameters=[Value|PX]);
-		(Value=element(float,[],[F]),atom_number(F,V),Parameters=[V|PX]);
+		(Value=element(double,[],[F]),atom_number(F,V),Parameters=[V|PX]);
 		(Value=element(i4,[],[I]),atom_number(I,V),Parameters=[V|PX])
 	).
 
@@ -78,3 +78,14 @@ get_post_data(DOM,Request) :-
 	load_xml(Read_stream,DOM,[space(remove)]),
 	close(Read_stream),
 	free_memory_file(M_file).
+
+% create_response(-Response_DOM,+Results)
+create_response(Response_DOM,Results) :-
+	TMP=[element(methodResponse, [], [element(params, [], [element(param, [], [element(value, [], [Element])])])])],!,
+	(
+		(float(Results),Element=element(double, [], [Results]));
+		(integer(Results),Element=element(i4,[],[Results]));
+		(string(Results),Element=element(string,[],[Results]));
+		(atom(Results),Element=Results)
+	),
+	Response_DOM=TMP.
