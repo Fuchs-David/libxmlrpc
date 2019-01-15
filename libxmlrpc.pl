@@ -40,9 +40,9 @@ reply(Request) :-
 	atom_string(Call,Predicate),
 	extract_parameters(Parameters,DOM),
 	% Call predicate from module specified by class and method
-	call(Call,Results,Parameters),
+	call(Call,Result,Parameters),
 	% Create response
-	create_response(Response_DOM,Results),
+	create_response(Response_DOM,Result),
 	current_output(O),
 	set_stream(O,encoding(utf8)),
 	write('Content-type: text/xml'),
@@ -57,7 +57,8 @@ extract(Parameters,[element(value,[],[Value])|More_elements]) :-
 	(
 		(number(Value),Parameters=[Value|PX]);
 		(Value=element(double,[],[F]),atom_number(F,V),Parameters=[V|PX]);
-		(Value=element(i4,[],[I]),atom_number(I,V),Parameters=[V|PX])
+		(Value=element(i4,[],[I]),atom_number(I,V),Parameters=[V|PX]);
+		(Value=element(string,[],[A]),atom_string(A,S),Parameters=[S|PX])
 	).
 
 % extract_parameters(-Parameters,+DOM)
@@ -67,6 +68,7 @@ extract_parameters(Parameters,DOM) :-
 	extract(Parameters,P2).
 
 % get_post_data(-DOM,+Request)
+% Retrieve posted XML data.
 get_post_data(DOM,Request) :-
 	http_read_data(Request,Data,[to(string)]),
 	new_memory_file(M_file),
@@ -79,13 +81,19 @@ get_post_data(DOM,Request) :-
 	close(Read_stream),
 	free_memory_file(M_file).
 
-% create_response(-Response_DOM,+Results)
-create_response(Response_DOM,Results) :-
+% create_response(-Response_DOM,+fault(faultCode(FC),faultString(FS)))
+% Handling of faults detected and reported by the application.
+create_response(Response_DOM,fault(faultCode(FC),faultString(FS))) :-
+	Response_DOM=[element(methodResponse, [], [element(fault, [], [element(value, [], [element(struct, [], [element(member, [], [element(name, [], [faultCode]), element(value, [], [element(int, [], [FC])])]),element(member, [], [element(name, [], [faultString]), element(value, [], [element(string, [], [FS])])])])])])])].
+
+% create_response(-Response_DOM,+Result)
+% Handling of data correctly passed by the application to this library.
+create_response(Response_DOM,Result) :-
 	TMP=[element(methodResponse, [], [element(params, [], [element(param, [], [element(value, [], [Element])])])])],!,
 	(
-		(float(Results),Element=element(double, [], [Results]));
-		(integer(Results),Element=element(i4,[],[Results]));
-		(string(Results),Element=element(string,[],[Results]));
-		(atom(Results),Element=Results)
+		(float(Result),Element=element(double, [], [Result]));
+		(integer(Result),Element=element(i4,[],[Result]));
+		(string(Result),Element=element(string,[],[Result]));
+		(atom(Result),Element=Result)
 	),
 	Response_DOM=TMP.
