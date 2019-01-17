@@ -52,7 +52,7 @@ reply(Request) :-
 
 % extract(-Parameters,+List_of_elements
 extract([],[]).
-extract(Parameters,[element(value,[],[Value])|More_elements]) :-
+extract(Parameters,[element(param,[],[element(value,[],[Value])])|More_elements]) :-
 	extract(PX,More_elements),
 	(
 		(number(Value),Parameters=[Value|PX]);
@@ -63,8 +63,8 @@ extract(Parameters,[element(value,[],[Value])|More_elements]) :-
 
 % extract_parameters(-Parameters,+DOM)
 extract_parameters(Parameters,DOM) :-
-	xpath(DOM,//methodCall/params/param,P1),
-	P1=element(param,[],P2),
+	xpath(DOM,//methodCall/params,P1),
+	P1=element(params,[],P2),
 	extract(Parameters,P2).
 
 % get_post_data(-DOM,+Request)
