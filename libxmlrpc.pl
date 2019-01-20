@@ -1,13 +1,12 @@
 :- module(xmlrpc,[
 		server/0,	% Start server with default port of 8080.
 		server/1,	% Start server with an arbitrary port number.
-		%server/2,	% Start server with SSl context.
+				% Or start HTTPS server with default port number
+		%server/2,	% Start HTTPS server with arbitrary port number.
 		register/1	% Load module.
 	]).
 :- use_module(library('http/thread_httpd')).
-:- use_module(library('http/http_header')).
 :- use_module(library('http/http_dispatch')).
-:- use_module(library('http/http_session')).
 :- use_module(library('http/http_error')).
 :- use_module(library('http/http_client')).
 :- use_module(library('sgml')).
@@ -20,10 +19,21 @@
 % register(+Module)
 register(Module) :- use_module(Module).
 
-% Predicates to start a server
+% Start HTTP server
 server :- server(8080).
-server(Port) :- http_server(http_dispatch, [port(Port)]).
-%server(Port,SSLContext) :- http_server(http_dispatch,[port(Port),ssl(SSLContext)]).
+server(Port) :-
+	number(Port),Port>=0,Port=<65535,
+	http_server(http_dispatch, [port(Port)]).
+
+% Start HTTPS server
+%server(ssl(Cert,Key,Password)) :- server(8443,ssl(Cert,Key,Password)).
+%server(Port,ssl(Cert,Key,Password)) :-
+%	number(Port),Port>=0,Port=<65535,
+%	string(Cert),string(Key),string(Password),
+%	http_server(http_dispatch,[port(Port),ssl([certificate_file(Cert),key_file(Key),password(Password)])]).
+
+% Check if the port number is valid.
+check_port(Port) :- number(Port),Port>=0,Port=<65535.
 
 % Predicate to handle requests
 reply(Request) :-
@@ -94,6 +104,6 @@ create_response(Response_DOM,Result) :-
 		(float(Result),Element=element(double, [], [Result]));
 		(integer(Result),Element=element(i4,[],[Result]));
 		(string(Result),Element=element(string,[],[Result]));
-		(atom(Result),Element=Result)
+		(atomic(Result),Element=Result)
 	),
 	Response_DOM=TMP.
