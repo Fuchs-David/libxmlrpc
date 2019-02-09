@@ -2,13 +2,14 @@
 		server/0,	% Start server with default port of 8080.
 		server/1,	% Start server with an arbitrary port number.
 				% Or start HTTPS server with default port number
-		%server/2,	% Start HTTPS server with arbitrary port number.
+		server/2,	% Start HTTPS server with arbitrary port number.
 		register/1	% Load module.
 	]).
 :- use_module(library('http/thread_httpd')).
 :- use_module(library('http/http_dispatch')).
 :- use_module(library('http/http_error')).
 :- use_module(library('http/http_client')).
+:- use_module(library('http/http_ssl_plugin')).
 :- use_module(library('sgml')).
 :- use_module(library('sgml_write')).
 :- use_module(library('xpath')).
@@ -26,11 +27,12 @@ server(Port) :-
 	http_server(http_dispatch, [port(Port)]).
 
 % Start HTTPS server
-%server(ssl(Cert,Key,Password)) :- server(8443,ssl(Cert,Key,Password)).
-%server(Port,ssl(Cert,Key,Password)) :-
-%	number(Port),Port>=0,Port=<65535,
-%	string(Cert),string(Key),string(Password),
-%	http_server(http_dispatch,[port(Port),ssl([certificate_file(Cert),key_file(Key),password(Password)])]).
+server(ssl(Cert,Key,Password)) :- server(8443,ssl(Cert,Key,Password)).
+server(Port,ssl(Cert,Key,Password)) :- server(Port,ssl(Cert,Key,Password),[]).
+server(Port,ssl(Cert,Key,Password),Options) :-
+	number(Port),Port>=0,Port=<65535,
+	string(Cert),string(Key),string(Password),
+	http_server(http_dispatch,[port(Port),ssl([certificate_file(Cert),key_file(Key),password(Password)])|Options]).
 
 % Check if the port number is valid.
 check_port(Port) :- number(Port),Port>=0,Port=<65535.
