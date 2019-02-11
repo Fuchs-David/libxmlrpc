@@ -3,6 +3,7 @@
 		server/1,	% Start server with an arbitrary port number.
 				% Or start HTTPS server with default port number
 		server/2,	% Start HTTPS server with arbitrary port number.
+		server/3,	% Allows passing more options to HTTPS server.
 		register/1	% Load module.
 	]).
 :- use_module(library('http/thread_httpd')).
@@ -35,7 +36,7 @@ server(Port,ssl(Cert,Key,Password),Options) :-
 	http_server(http_dispatch,[port(Port),ssl([certificate_file(Cert),key_file(Key),password(Password)])|Options]).
 
 % Check if the port number is valid.
-check_port(Port) :- number(Port),Port>=0,Port=<65535.
+check_port(Port) :- number(Port),Port>0,Port=<65535.
 
 % Predicate to handle requests
 reply(Request) :-
