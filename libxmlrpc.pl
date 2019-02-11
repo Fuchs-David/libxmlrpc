@@ -23,14 +23,14 @@ register(Module) :- use_module(Module).
 % Start HTTP server
 server :- server(8080).
 server(Port) :-
-	number(Port),Port>=0,Port=<65535,
+	check_port(Port),
 	http_server(http_dispatch, [port(Port)]).
 
 % Start HTTPS server
 server(ssl(Cert,Key,Password)) :- server(8443,ssl(Cert,Key,Password)).
 server(Port,ssl(Cert,Key,Password)) :- server(Port,ssl(Cert,Key,Password),[]).
 server(Port,ssl(Cert,Key,Password),Options) :-
-	number(Port),Port>=0,Port=<65535,
+	check_port(Port),
 	string(Cert),string(Key),string(Password),
 	http_server(http_dispatch,[port(Port),ssl([certificate_file(Cert),key_file(Key),password(Password)])|Options]).
 
